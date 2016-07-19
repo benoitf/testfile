@@ -1,13 +1,21 @@
 #!/usr/bin/env node
-var DEFAULT_DOCKERFILE_CONTENT = 'FROM codenvy/ubuntu_jdk8';
-var DEFAULT_HOSTNAME = '192.168.65.2';
-var debug = false;
-var times = 10;
+/// <reference path='./typings/tsd.d.ts' />
+
+// imports
+import {RemoteIp} from './remoteip';
+
+
+var DEFAULT_DOCKERFILE_CONTENT: String = 'FROM codenvy/ubuntu_jdk8';
+
+// grab default hostname from the remote ip component
+var DEFAULT_HOSTNAME: String = new RemoteIp().getIp();
+
+var debug: boolean = false;
+var times: number = 10;
 
 // gloabl var
 var waitDone = false;
-var che = {};
-che.hostname = DEFAULT_HOSTNAME;
+var che: { hostname: String, server: any } = {hostname: DEFAULT_HOSTNAME, server: 'tmp'};
 var dockerContent;
 
 // requirements
@@ -16,19 +24,16 @@ var http = require('http');
 var fs = require('fs');
 var vm = require('vm');
 var readline = require('readline');
-var spawn = require('child_process').spawn
+var spawn = require('child_process').spawn;
 var exec = require('child_process').exec;
 
-// polyfill
-if (!String.prototype.startsWith) {
-  String.prototype.startsWith = function (searchString, position) {
-    position = position || 0;
-    return this.substr(position, searchString.length) === searchString;
-  };
+function startsWith(value:String, searchString: String) : Boolean {
+   return value.substr(0, searchString.length) === searchString;
 }
 
+
 // init folder/files variables
-var currentFolder = path.resolve('./');
+var currentFolder: String = path.resolve('./');
 var folderName = path.basename(currentFolder);
 var cheFile = path.resolve(currentFolder, 'chefile');
 var dotCheFolder = path.resolve(currentFolder, '.che');
@@ -38,7 +43,11 @@ var chePropertiesFile = path.resolve(confFolder, 'che.properties');
 
 var mode;
 var args = process.argv.slice(2);
-if (args.length == 0) {
+
+analyzeArgs(args);
+
+function analyzeArgs(args) {
+  if (args.length == 0) {
   console.log('only init and up commands are supported.');
   return;
 } else if ('init' === args[0]) {
@@ -50,6 +59,7 @@ if (args.length == 0) {
   return;
 }
 
+}
 
 function parse() {
 
@@ -66,7 +76,7 @@ function parse() {
 
     // setup the bindings for the script
     che.server =  {};
-    che.server.ip = hostname;
+    che.server.ip = che.hostname;
 
     // create sandboxed object
     var sandbox = { "che": che, "console": console};
@@ -113,7 +123,7 @@ function getDockerContent() {
 
   // use synchronous API
   try {
-    stats = fs.statSync(dockerFilePath);
+    var stats = fs.statSync(dockerFilePath);
     console.log('Using a custom project Dockerfile \'' + dockerFilePath + '\' for the setup of the workspace.');
     var content = fs.readFileSync(dockerFilePath, 'utf8');
     return content;
@@ -210,14 +220,14 @@ function initCheFolders() {
 
   // create .che folder
   try {
-    fs.mkdirSync(dotCheFolder, 0744);
+    fs.mkdirSync(dotCheFolder, 0o744);
   } catch (e) {
     // already exist
   }
 
   // create .che/workspaces folder
   try {
-    fs.mkdirSync(workspacesFolder, 0744);
+    fs.mkdirSync(workspacesFolder, 0o744);
   } catch (e) {
     // already exist
   }
@@ -225,7 +235,7 @@ function initCheFolders() {
   // create .che/conf folder
 
   try {
-    fs.mkdirSync(confFolder, 0744);
+    fs.mkdirSync(confFolder, 0o744);
   } catch (e) {
     // already exist
   }
@@ -234,7 +244,7 @@ function initCheFolders() {
   // copy configuration file
 
   try {
-    stats = fs.statSync(chePropertiesFile);
+    var stats = fs.statSync(chePropertiesFile);
   } catch (e) {
     // file does not exist, copy it
     fs.writeFileSync(chePropertiesFile, fs.readFileSync(path.resolve(__dirname, 'che.properties')));
@@ -265,7 +275,7 @@ function updateConfFile(propertyName, propertyValue) {
 
 
 
-    if (line.startsWith(propertyName)) {
+    if (startsWith(line, propertyName)) {
       foundLine = true;
       updatedLine = propertyName + '=' + propertyValue + '\n';
     } else {

@@ -5,10 +5,10 @@ RUN echo "http://dl-4.alpinelinux.org/alpine/edge/community" >> /etc/apk/reposit
     apk add --update docker && \
     rm -rf /tmp/* /var/cache/apk/*
 
-ADD src /src
+ADD lib /lib
 ADD bin /bin
 
 
 
 
-CMD ["node", "src/che.js"]
+CMD ["node", "lib/che.js"]
