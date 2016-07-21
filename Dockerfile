@@ -1,9 +1,15 @@
 FROM mhart/alpine-node
 
-RUN echo "http://dl-4.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
-    apk upgrade --update && \
-    apk add --update docker && \
-    rm -rf /tmp/* /var/cache/apk/*
+ENV DOCKER_BUCKET get.docker.com
+ENV DOCKER_VERSION 1.6.0
+
+RUN     set -x \
+    && apk add --no-cache \
+    ca-certificates \
+    curl \
+    openssl \
+    && curl -sL "https://${DOCKER_BUCKET}/builds/Linux/x86_64/docker-$DOCKER_VERSION" \
+    > /usr/bin/docker; chmod +x /usr/bin/docker
 
 ADD lib /lib
 ADD bin /bin

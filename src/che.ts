@@ -3,12 +3,12 @@
 
 // imports
 import {RemoteIp} from './remoteip';
+import {RecipeBuilder} from './recipebuilder';
 
-
-var DEFAULT_DOCKERFILE_CONTENT: String = 'FROM codenvy/ubuntu_jdk8';
 
 // grab default hostname from the remote ip component
 var DEFAULT_HOSTNAME: String = new RemoteIp().getIp();
+
 
 var debug: boolean = false;
 var times: number = 10;
@@ -24,7 +24,6 @@ var http = require('http');
 var fs = require('fs');
 var vm = require('vm');
 var readline = require('readline');
-var spawn = require('child_process').spawn;
 var exec = require('child_process').exec;
 
 function startsWith(value:String, searchString: String) : Boolean {
@@ -84,7 +83,9 @@ function parse() {
     var script = vm.createScript(script_code);
     script.runInNewContext(sandbox);
 
+  if (debug) {
     console.log('Che file parsing object is ', che);
+  }
 }
 
 
@@ -111,27 +112,12 @@ function up() {
     // needs to invoke docker run
     cheBoot();
 
-    dockerContent = getDockerContent();
+    dockerContent = new RecipeBuilder().getDockerContent();
 
     // loop to check startup (during 30seconds)
     waitCheBoot();
 }
 
-function getDockerContent() {
-  // build path to the Dockerfile in current directory
-  var dockerFilePath = path.resolve('./Dockerfile');
-
-  // use synchronous API
-  try {
-    var stats = fs.statSync(dockerFilePath);
-    console.log('Using a custom project Dockerfile \'' + dockerFilePath + '\' for the setup of the workspace.');
-    var content = fs.readFileSync(dockerFilePath, 'utf8');
-    return content;
-  } catch (e) {
-    // file does not exist, return default
-    return DEFAULT_DOCKERFILE_CONTENT;
-  }
-}
 
 
 // Create workspace based on the remote hostname and workspacename
@@ -202,7 +188,6 @@ function displayUrlWorkspace(workspace) {
     if (link.rel === 'ide url') {
       found = true;
       console.log('Open browser to ' + link.href);
-      //spawn('open', [link.href]);
     }
     i++;
 
@@ -294,17 +279,20 @@ function updateConfFile(propertyName, propertyValue) {
 
 }
 
+//  ' -e CHE_CONF_FOLDER=' + confFolder +
 
 function cheBoot() {
-  var child = exec('docker run -p 8080:8080' +
-      ' -p 8000:8000' +
-      ' --name che' +
+
+  var commandLine: String = 'docker run ' +
       ' -v /var/run/docker.sock:/var/run/docker.sock' +
-      ' -v ' + workspacesFolder + ':' + workspacesFolder +
-      ' -v ' + currentFolder + ':' + workspacesFolder + '/local/' + folderName +
-      ' -v ' + confFolder + ':/container -e CHE_LOCAL_CONF_DIR=/container' +
-      ' codenvy/che:nightly' +
-      ' --remote:' + che.hostname , function callback(error, stdout, stderr) {
+      ' -e CHE_DATA_FOLDER=' + workspacesFolder +
+      ' -e CHE_CONF_FOLDER=' + confFolder +
+      ' codenvy/che-launcher:nightly start';
+
+  if (debug) {
+    console.log('Executing command line', commandLine);
+  }
+  var child = exec(commandLine , function callback(error, stdout, stderr) {
     console.log('error is' + error);
       }
   );
@@ -335,11 +323,18 @@ function waitCheBoot() {
       'Content-Type': 'application/json;charset=UTF-8'
     }
   };
+  if (debug) {
+    console.log('using che ping options', options, 'and docker content', dockerContent);
+  }
+
   var req = http.request(options, function(res) {
     res.on('data', function (body) {
 
       if (res.statusCode === 200 && !waitDone) {
         waitDone = true;
+        if (debug) {
+          console.log('status code is 200, creating workspace');
+        }
         createWorkspace(che.hostname, 'local', dockerContent);
       }
     });
