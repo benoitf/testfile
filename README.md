@@ -1,3 +1,8 @@
+PreReqs
+- check typescript is installed
+
+$ npm install -g tsc
+
 Build
 
 $ build.sh
