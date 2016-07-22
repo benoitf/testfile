@@ -1,6 +1,6 @@
-Build image
+Build
 
-$ docker build -t local . 
+$ build.sh
 
 Run
 

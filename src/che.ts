@@ -293,15 +293,15 @@ function cheBoot() {
     console.log('Executing command line', commandLine);
   }
   var child = exec(commandLine , function callback(error, stdout, stderr) {
-    console.log('error is' + error);
+    //console.log('error is ' + error, stdout, stderr);
       }
   );
 
-  if (debug) {
+  //if (debug) {
     child.stdout.on('data', function (data) {
-      console.log('Che::' + data.toString());
+      console.log(data.toString());
     });
-  }
+  //}
 
 }
 
